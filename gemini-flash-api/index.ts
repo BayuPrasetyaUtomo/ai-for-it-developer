@@ -4,6 +4,7 @@ import fs from "node:fs";
 import multer from "multer";
 
 interface MulterRequest extends Request {
+  // @ts-expect-error
   file?: multer.File;
 }
 
@@ -36,7 +37,7 @@ app.post("/generate-text", async (req, res) => {
     const { response } = result;
 
     res.json({ output: response.text() });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
