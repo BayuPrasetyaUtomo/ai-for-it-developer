@@ -1,29 +1,19 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import express, { type Request, type Response } from "express";
+import express from "express";
 import fs from "node:fs";
 import multer from "multer";
+import dotenv from "dotenv";
 
-interface MulterRequest extends Request {
-  // @ts-expect-error
-  file?: multer.File;
-}
+dotenv.config();
 
-const genAI = new GoogleGenerativeAI(Bun.env.GEMINI_API_KEY ?? "");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 const app = express();
 app.use(express.json());
 const upload = multer({ dest: "uploads/" });
 
-const generateContent = async (prompt: string) => {
-  const result = await model.generateContent(prompt);
-  const { response } = result;
-  const text = response;
-
-  return text;
-};
-
-const PORT = Bun.env.PORT ?? 3000;
+const PORT = process.env.PORT ?? 3000;
 
 app.listen(PORT, () => {
   console.log(`Gemini API server is running at http://localhost:${PORT}`);
@@ -37,12 +27,12 @@ app.post("/generate-text", async (req, res) => {
     const { response } = result;
 
     res.json({ output: response.text() });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-const imageToGenerativePart = (filePath: string, mimeType: string) => ({
+const imageToGenerativePart = (filePath, mimeType) => ({
   inlineData: {
     data: fs.readFileSync(filePath).toString("base64"),
     mimeType: "image/jpg",
@@ -52,7 +42,7 @@ const imageToGenerativePart = (filePath: string, mimeType: string) => ({
 app.post(
   "/generate-from-image",
   upload.single("image"),
-  async (req: MulterRequest, res: Response) => {
+  async (req, res) => {
     const { prompt } = req.body;
     const { path: filepath, mimetype } = req.file;
 
@@ -68,7 +58,7 @@ app.post(
       const { response } = result;
 
       res.status(200).json({ output: response.text() });
-    } catch (error: any) {
+    } catch (error) {
       res.status(500).json({ error: error.message });
     }
   },
@@ -77,7 +67,7 @@ app.post(
 app.post(
   "/generate-from-document",
   upload.single("document"),
-  async (req: MulterRequest, res: Response) => {
+  async (req, res) => {
     const { path: filepath, mimetype } = req.file;
     const buffer = fs.readFileSync(filepath);
     const base64Data = buffer.toString("base64");
@@ -102,7 +92,7 @@ app.post(
       const { response } = result;
 
       res.status(200).json({ output: response.text() });
-    } catch (error: any) {
+    } catch (error) {
       res.status(500).json({ error: error.message });
     } finally {
       fs.unlinkSync(filepath);
@@ -113,7 +103,7 @@ app.post(
 app.post(
   "/generate-from-audio",
   upload.single("audio"),
-  async (req: MulterRequest, res: Response) => {
+  async (req, res) => {
     const { path: filepath, mimetype } = req.file;
     const buffer = fs.readFileSync(filepath);
     const base64Audio = buffer.toString("base64");
@@ -138,7 +128,7 @@ app.post(
       const { response } = result;
 
       res.status(200).json({ output: response.text() });
-    } catch (error: any) {
+    } catch (error) {
       res.status(500).json({ error: error.message });
     } finally {
       fs.unlinkSync(filepath);
